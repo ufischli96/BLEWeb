@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Powerslide BLE Web-App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="favicon.ico">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <meta charset="UTF-8">
+    <style>
+        /* Basic styling for the two-column layout */
+        .data-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two equal columns */
+            gap: 20px; /* Space between columns */
+            padding: 15px; /* Dies fügt den Abstand zum äußeren Rahmen hinzu */
+        }
+        .data-column {
+            border: 1px solid #ccc; /* Add a border around each column */
+            padding: 15px; /* Add some padding inside the columns */
+            border-radius: 8px; /* Slightly rounded corners for the border */
+        }
+        .data-column h3 {
+            text-align: center; /* Center the column titles */
+            margin-top: 0; /* Remove default top margin */
+            margin-bottom: 10px; /* Space below the title */
+        }
+        .data-column p {
+            text-align: left; /* Align text to the left */
+        }
+        /* Style for the status boxes */
+        .status-box {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: white; /* Default text color for green box */
+        }
+        .status-box.on {
+            background-color: red;
+            color: white; /* Text color for "Ein" (red box) */
+        }
+        .status-box.off {
+            background-color: green;
+            color: white; /* Text color for "Aus" (green box) */
+        }
+    </style>
+</head>
+<body>
+    <div class="topnav">
+        <h1>Powerslide BLE Web-App</h1>
+    </div>
+    <div class="content">
+        <div class="card-grid">
+            <div class="card">
+                <p>
+                    <button id="connectBleButton" class="connectButton"> Connect to Microinverter</button>
+                    <button id="disconnectBleButton" class="disconnectButton"> Disconnect to Microinverter</button>
+                </p>
+                <p class="gray-label">BLE state: <strong><span id="bleState" style="color:#d13a30;">Disconnected</span></strong></p>
+            </div>
+        </div>
+        <div class="card-grid">
+            <div class="card">
+                <h2>Microcontroller Data</h2>
+                <div class="data-columns">
+                    <div class="data-column">
+                        <h3>PV-Messwerte</h3>
+                        <p>PV Input Voltage: <span id="pvInV">NaN</span> V</p>
+                        <p>PV Input Current: <span id="pvInI">NaN</span> A</p>
+                    </div>
+                    <div class="data-column">
+                        <h3>Netz-Messwerte</h3>
+                        <p>LLC DC Link Output Voltage: <span id="llcDCLinkOutV">NaN</span> V</p>
+                        <p>Inverter Grid Output Voltage: <span id="inverterGridOutV">NaN</span> V</p>
+                        <p>Inverter Grid Output Current: <span id="inverterGridOutI">NaN</span> A</p>
+                        <p>Grid Cos(phi): <span id="inverterGridOutCosphi">NaN</span></p>
+                        <p>Grid Frequency: <span id="inverterGridOutF">NaN</span> Hz</p>
+                        <p>Fault Status: <span id="faultStatus">NaN</span></p>
+                        <p>Relay Status: <span id="relaisStatus">NaN</span></p>
+                    </div>
+                </div>
+                <p class="gray-label">Last update: <span id="mcDataTimestamp"></span></p>
+            </div>
+        </div>
+
+    </div>
+    <div class="footer">
+     </div>
+</body>
+<script>
+    // DOM Elements
+    const connectButton = document.getElementById('connectBleButton');
+    const disconnectButton = document.getElementById('disconnectBleButton');
+    const bleStateContainer = document.getElementById('bleState');
+
+    // NEW DOM Elements for microcontroller data
+    const pvInVContainer = document.getElementById('pvInV');
+    const pvInIContainer = document.getElementById('pvInI');
+    const llcDCLinkOutVContainer = document.getElementById('llcDCLinkOutV');
+    const inverterGridOutVContainer = document.getElementById('inverterGridOutV');
+    const inverterGridOutIContainer = document.getElementById('inverterGridOutI');
+    const inverterGridOutCosphiContainer = document.getElementById('inverterGridOutCosphi');
+    const inverterGridOutFContainer = document.getElementById('inverterGridOutF');
+    const faultStatusContainer = document.getElementById('faultStatus');
+    const relaisStatusContainer = document.getElementById('relaisStatus');
+    const mcDataTimestampContainer = document.getElementById('mcDataTimestamp');
+
+    //Define BLE Device Specs
+    var deviceName ='Powerslide';
+    var bleService = '19b10000-e8f2-537e-4f6c-d104768a1214';
+    var microcontrollerDataCharacteristic = '19b10003-e8f2-537e-4f6c-d104768a1214'; // NEW UUID
+
+    //Global Variables to Handle Bluetooth
+    var bleServer;
+    var bleServiceFound;
+    var microcontrollerDataCharacteristicFound; // NEW
+    var manualDisconnect = false; // NEW: Flag to indicate manual disconnection
+
+    // Connect Button (search for BLE Devices only if BLE is available)
+    connectButton.addEventListener('click', (event) => {
+        if (isWebBluetoothEnabled()){
+            manualDisconnect = false; // Ensure flag is false before connecting
+            connectToDevice();
+        }
+    });
+
+    // Disconnect Button
+    disconnectButton.addEventListener('click', () => {
+        manualDisconnect = true; // Set flag when disconnect is initiated manually
+        disconnectDevice();
+    });
+
+    // Check if BLE is available in your Browser
+    function isWebBluetoothEnabled() {
+        if (!navigator.bluetooth) {
+            console.log('Web Bluetooth API is not available in this browser!');
+            bleStateContainer.innerHTML = "Web Bluetooth API is not available in this browser/device!";
+            return false
+        }
+        console.log('Web Bluetooth API supported in this browser.');
+        return true
+    }
+
+    // Connect to BLE Device and Enable Notifications
+    function connectToDevice(){
+        console.log('Initializing Bluetooth...');
+        navigator.bluetooth.requestDevice({
+            filters: [{name: deviceName}],
+            optionalServices: [bleService]
+        })
+        .then(device => {
+            console.log('Device Selected:', device.name);
+            bleStateContainer.innerHTML = 'Connected to device ' + device.name;
+            bleStateContainer.style.color = "#24af37";
+            device.addEventListener('gattservicedisconnected', onDisconnected);
+            return device.gatt.connect();
+        })
+        .then(gattServer =>{
+            bleServer = gattServer;
+            console.log("Connected to GATT Server");
+            return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            bleServiceFound = service;
+            console.log("Service discovered:", service.uuid);
+            // Get microcontroller data characteristic
+            return service.getCharacteristic(microcontrollerDataCharacteristic);
+        })
+        .then(characteristic => {
+            microcontrollerDataCharacteristicFound = characteristic; // NEW
+
+            console.log("Microcontroller Data Characteristic discovered:", microcontrollerDataCharacteristicFound.uuid); // NEW
+
+            // NEW: Set up notifications for microcontroller data characteristic
+            microcontrollerDataCharacteristicFound.addEventListener('characteristicvaluechanged', handleMicrocontrollerDataChange);
+            microcontrollerDataCharacteristicFound.startNotifications();
+            console.log("Microcontroller Data Notifications Started.");
+
+            return Promise.resolve(); // No initial read for original sensor anymore
+        })
+        .catch(error => {
+            console.log('Error: ', error);
+            bleStateContainer.innerHTML = "Connection failed!"; // Indicate connection failure
+            bleStateContainer.style.color = "#d13a30";
+            manualDisconnect = false; // Reset flag in case of connection error
+        })
+    }
+
+    function onDisconnected(event){
+        console.log('Device Disconnected:', event.target.device.name);
+        bleStateContainer.innerHTML = "Device disconnected";
+        bleStateContainer.style.color = "#d13a30";
+
+        // Only attempt to reconnect automatically if it was NOT a manual disconnect
+        if (!manualDisconnect) {
+            console.log('Attempting to reconnect automatically...');
+            // Add a small delay before attempting to reconnect
+            setTimeout(() => {
+                connectToDevice();
+            }, 2000); // Wait 2 seconds before attempting reconnection
+        } else {
+            console.log('Manual disconnection, not attempting auto-reconnect.');
+            manualDisconnect = false; // Reset the flag after handling the manual disconnect
+        }
+    }
+
+    // NEW: Handler for microcontroller data changes
+    function handleMicrocontrollerDataChange(event){
+        const newValueReceived = new TextDecoder().decode(event.target.value);
+        console.log("Characteristic value changed (Microcontroller Data): ", newValueReceived);
+
+        try {
+            const data = JSON.parse(newValueReceived);
+            // Apply toFixed(2) for better float display
+            pvInVContainer.innerHTML = data.pv_v.toFixed(2);
+            pvInIContainer.innerHTML = data.pv_i.toFixed(2);
+            llcDCLinkOutVContainer.innerHTML = data.llc_v.toFixed(2);
+            inverterGridOutVContainer.innerHTML = data.grid_v.toFixed(2);
+            inverterGridOutIContainer.innerHTML = data.grid_i.toFixed(2);
+            inverterGridOutCosphiContainer.innerHTML = data.grid_cosphi.toFixed(2);
+            inverterGridOutFContainer.innerHTML = data.grid_f.toFixed(2);
+            
+            // Update Fault Status and set color
+            faultStatusContainer.innerHTML = data.fault;
+            if (data.fault === 1) {
+                faultStatusContainer.style.color = "red";
+            } else if (data.fault === 0) {
+                faultStatusContainer.style.color = "green";
+            } else {
+                faultStatusContainer.style.color = "black"; // Default color if not 0 or 1
+            }
+
+            // Update Relay Status with colored boxes and text
+            relaisStatusContainer.innerHTML = ""; // Clear existing content
+            const relaisBox = document.createElement('span');
+            relaisBox.classList.add('status-box');
+
+            if (data.relais === 1) {
+                relaisBox.classList.add('on');
+                relaisBox.textContent = "Ein";
+            } else if (data.relais === 0) {
+                relaisBox.classList.add('off');
+                relaisBox.textContent = "Aus";
+            } else {
+                relaisBox.textContent = data.relais; // Fallback to raw value if not 0 or 1
+            }
+            relaisStatusContainer.appendChild(relaisBox);
+
+            mcDataTimestampContainer.innerHTML = getDateTime();
+        } catch (e) {
+            console.error("Error parsing microcontroller data JSON:", e);
+            // Optionally, update the UI to indicate a data error
+            pvInVContainer.innerHTML = "Error";
+            pvInIContainer.innerHTML = "Error";
+            llcDCLinkOutVContainer.innerHTML = "Error";
+            inverterGridOutVContainer.innerHTML = "Error";
+            inverterGridOutIContainer.innerHTML = "Error";
+            inverterGridOutCosphiContainer.innerHTML = "Error";
+            inverterGridOutFContainer.innerHTML = "Error";
+            faultStatusContainer.innerHTML = "Error";
+            relaisStatusContainer.innerHTML = "Error";
+        }
+    }
+
+    function disconnectDevice() {
+        console.log("Disconnect Device.");
+        if (bleServer && bleServer.connected) {
+            if (microcontrollerDataCharacteristicFound) {
+                microcontrollerDataCharacteristicFound.stopNotifications()
+                    .then(() => {
+                        console.log("Microcontroller Data Notifications Stopped");
+                        return bleServer.disconnect();
+                    })
+                    .then(() => {
+                        console.log("Device Disconnected");
+                        bleStateContainer.innerHTML = "Device Disconnected";
+                        bleStateContainer.style.color = "#d13a30";
+                        // The onDisconnected event listener will now handle the `manualDisconnect` flag
+                    })
+                    .catch(error => {
+                        console.log("An error occurred during disconnection:", error);
+                        manualDisconnect = false; // Reset flag if an error prevents clean disconnect
+                    });
+            } else {
+                console.log("No characteristic found to stop notifications. Disconnecting server.");
+                bleServer.disconnect(); // Still try to disconnect the server
+                bleStateContainer.innerHTML = "Device Disconnected";
+                bleStateContainer.style.color = "#d13a30";
+                manualDisconnect = false; // Reset flag as no characteristic was found
+            }
+        } else {
+            console.error("Bluetooth is not connected.");
+            window.alert("Bluetooth is not connected.");
+            manualDisconnect = false; // Reset flag as nothing was connected
+        }
+    }
+
+    function getDateTime() {
+        var currentdate = new Date();
+        var day = ("00" + currentdate.getDate()).slice(-2); // Convert day to string and slice
+        var month = ("00" + (currentdate.getMonth() + 1)).slice(-2);
+        var year = currentdate.getFullYear();
+        var hours = ("00" + currentdate.getHours()).slice(-2);
+        var minutes = ("00" + currentdate.getMinutes()).slice(-2);
+        var seconds = ("00" + currentdate.getSeconds()).slice(-2);
+
+        var datetime = day + "/" + month + "/" + year + " at " + hours + ":" + minutes + ":" + seconds;
+        return datetime;
+    }
+
+
+</script>
+
+</html>
