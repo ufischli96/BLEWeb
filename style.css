@@ -9,7 +9,7 @@ h1 {
 }
 .topnav {
     overflow: hidden;
-    background-color: #0A1128;
+    background-color: #000000;
 }
 body {
     margin: 0;
@@ -47,11 +47,11 @@ button {
 }
 
 .connectButton{
-    background-color: #24af37;
+    background-color: #009600;
 }
 
 .disconnectButton{
-    background-color: #d13a30;
+    background-color: #ff0000;
 }
 
 .gray-label {
