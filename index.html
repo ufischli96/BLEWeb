@@ -62,10 +62,10 @@
         <div class="card-grid">							<!-- Verbindungssteuerung mit zwei Schaltflächen -->
             <div class="card">
                 <p>
-                    <button id="connectBleButton" class="connectButton"> Connect Microinverter</button>				<!-- Schaltfläche Connect Microinverter -->
-                    <button id="disconnectBleButton" class="disconnectButton"> Disconnect Microinverter</button>	<!-- Schaltfläche Disconnect Microinverter -->
+                    <button id="connectBleButton" class="connectButton"> Microinverter verbinden</button>		<!-- Schaltfläche Connect Microinverter -->
+                    <button id="disconnectBleButton" class="disconnectButton"> Microinverter trennen</button>	<!-- Schaltfläche Disconnect Microinverter -->
                 </p>
-                <p class="gray-label">BLE Status: <strong><span id="bleState" style="color:#ff0000;">Disconnected</span></strong></p>
+                <p class="gray-label">BLE Status: <strong><span id="bleState" style="color:#ff0000;">Verbindung getrennt</span></strong></p>
             </div>
         </div>
         <div class="card-grid">	<!-- Card-Grid Container für Mikrocontroller-Daten -->
@@ -161,8 +161,8 @@
         })
         .then(device => {
             console.log('Device Selected:', device.name);
-            bleStateContainer.innerHTML = 'Connected to device ' + device.name;
-            bleStateContainer.style.color = "#24af37";
+            bleStateContainer.innerHTML = 'Verbindung zu ' + device.name;
+            bleStateContainer.style.color = "#009600";
             device.addEventListener('gattservicedisconnected', onDisconnected);
             return device.gatt.connect();
         })
@@ -192,7 +192,7 @@
         })
         .catch(error => {
             console.log('Error during connection: ', error);
-            bleStateContainer.innerHTML = "Connection failed!";
+            bleStateContainer.innerHTML = "Verbindungsfehler!";
             bleStateContainer.style.color = "#ff0000";
             // Ensure manualDisconnect is false on connection failure
             manualDisconnect = false; // Important: if connection fails, it's not a manual disconnect
@@ -210,7 +210,7 @@
                 }, RECONNECT_DELAY_MS);
             } else if (!manualDisconnect && reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
                 console.log('Max auto-reconnect attempts reached. Please connect manually.');
-                bleStateContainer.innerHTML = "Auto-reconnect failed. Connect manually.";
+                bleStateContainer.innerHTML = "Automatische Verbindung fehlgeschlagen. Manuell verbinden.";
             } else {
                 console.log('Manual disconnection or connection failed after max retries, not attempting auto-reconnect.');
             }
@@ -218,8 +218,8 @@
     }
 
     function onDisconnected(event){
-        console.log('Device Disconnected:', event.target.device.name);
-        bleStateContainer.innerHTML = "Device disconnected";
+        console.log('Verbindung getrennt:', event.target.device.name);
+        bleStateContainer.innerHTML = "Verbindung getrennt";
         bleStateContainer.style.color = "#ff0000";
 
         // Reset global BLE objects to ensure a clean state for the next connection attempt
@@ -311,7 +311,7 @@
                     })
                     .then(() => {
                         console.log("Device Disconnected successfully.");
-                        bleStateContainer.innerHTML = "Device Disconnected";
+                        bleStateContainer.innerHTML = "Verbindung getrennt";
                         bleStateContainer.style.color = "#ff0000";
                         // Reset global BLE objects here for a clean state
                         bleServer = null;
@@ -330,7 +330,7 @@
             } else {
                 console.log("No characteristic found to stop notifications. Disconnecting server.");
                 bleServer.disconnect();
-                bleStateContainer.innerHTML = "Device Disconnected";
+                bleStateContainer.innerHTML = "Verbindung getrennt";
                 bleStateContainer.style.color = "#ff0000";
                 // Reset global BLE objects
                 bleServer = null;
