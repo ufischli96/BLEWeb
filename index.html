@@ -1,102 +1,110 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Powerslide BLE Web-App</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" type="image/png" href="favicon.ico">
-    <link rel="stylesheet" type="text/css" href="style.css">
-    <meta charset="UTF-8">
+    <title>Powerslide BLE Web-App</title>									<!-- Setzt den Titel der Browser-Registerkarte oder des Fensters -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">	<!-- Konfiguriert das Responsive Design für verschiedene Geräte -->
+    <link rel="icon" type="image/png" href="favicon.ico">					<!-- Definiert das Favicon für die Webseite -->
+    <link rel="stylesheet" type="text/css" href="style.css">				<!-- Definiert das Favicon für die Webseite -->
+    <meta charset="UTF-8">													<!-- Legt die Zeichenkodierung auf UTF-8 fest -->
     <style>
-        /* Basic styling for the two-column layout */
-        .data-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr; /* Two equal columns */
-            gap: 20px; /* Space between columns */
-            padding: 15px; /* Dies fügt den Abstand zum äußeren Rahmen hinzu */
-        }
-        .data-column {
-            border: 1px solid #ccc; /* Add a border around each column */
-            padding: 15px; /* Add some padding inside the columns */
-            border-radius: 8px; /* Slightly rounded corners for the border */
-        }
-        .data-column h3 {
-            text-align: center; /* Center the column titles */
-            margin-top: 0; /* Remove default top margin */
-            margin-bottom: 10px; /* Space below the title */
-        }
-        .data-column p {
-            text-align: left; /* Align text to the left */
-        }
-        /* Style for the status boxes */
-        .status-box {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-weight: bold;
-            color: white; /* Default text color for green box */
-        }
-        .status-box.on {
-            background-color: red;
-            color: white; /* Text color for "Ein" (red box) */
-        }
-        .status-box.off {
-            background-color: green;
-            color: white; /* Text color for "Aus" (green box) */
-        }
-    </style>
+		/* Verwendet CSS Grid für ein Zwei-Spalten-Layout mit Abstand zwischen den Spalten und zum äußeren Rahmen */
+		.data-columns {
+			display: grid;
+			grid-template-columns: 1fr 1fr; /* Two equal columns */
+			gap: 20px; /* Space between columns */
+			padding: 15px; /* Dies fügt den Abstand zum äußeren Rahmen hinzu */
+		}
+		.data-column {
+			border: 1px solid #ccc; /* Add a border around each column */
+			padding: 15px; /* Add some padding inside the columns */
+			border-radius: 8px; /* Slightly rounded corners for the border */
+		}
+		.data-column h3 {
+			text-align: center; /* Center the column titles */
+			margin-top: 0; /* Remove default top margin */
+			margin-bottom: 10px; /* Space below the title */
+		}
+		.data-column p {
+			/* Remove text-align: left; from here as we'll use flexbox */
+			display: flex; /* Use flexbox to align content within the paragraph */
+			justify-content: space-between; /* Puts space between the two elements (label and value) */
+			align-items: center; /* Vertically aligns items in the middle */
+			margin-bottom: 5px; /* Add some space between paragraph elements */
+		}
+		/* Style for the numerical value spans */
+		.data-column p span {
+			text-align: right; /* Align the text of the span (the number) to the right */
+			flex-grow: 1; /* Allows the span to take up available space, pushing it to the right */
+		}
+		/* Definiert grundlegendes Styling für Statusfelder. */
+		.status-box {
+			display: inline-block;
+			padding: 5px 10px;
+			border-radius: 5px;
+			font-weight: bold;
+			color: white; /* Default text color for green box */
+		}
+		.status-box.on {
+			background-color: red;
+			color: white; /* Text color for "Ein" (red box) */
+		}
+		.status-box.off {
+			background-color: green;
+			color: white; /* Text color for "Aus" (green box) */
+		}
+	</style>
 </head>
 <body>
     <div class="topnav">
-        <h1>Powerslide BLE Web-App</h1>
+        <h1>Powerslide Microinverter BLE Web-App</h1>	<!--  Enthält eine Hauptüberschrift. -->
     </div>
-    <div class="content">
-        <div class="card-grid">
+    <div class="content">								<!-- Hauptinhalt content -->
+        <div class="card-grid">							<!-- Verbindungssteuerung mit zwei Schaltflächen -->
             <div class="card">
                 <p>
-                    <button id="connectBleButton" class="connectButton"> Connect to Microinverter</button>
-                    <button id="disconnectBleButton" class="disconnectButton"> Disconnect to Microinverter</button>
+                    <button id="connectBleButton" class="connectButton"> Connect Microinverter</button>				<!-- Schaltfläche Connect Microinverter -->
+                    <button id="disconnectBleButton" class="disconnectButton"> Disconnect Microinverter</button>	<!-- Schaltfläche Disconnect Microinverter -->
                 </p>
-                <p class="gray-label">BLE state: <strong><span id="bleState" style="color:#d13a30;">Disconnected</span></strong></p>
+                <p class="gray-label">BLE Status: <strong><span id="bleState" style="color:#ff0000;">Disconnected</span></strong></p>
             </div>
         </div>
-        <div class="card-grid">
+        <div class="card-grid">	<!-- Card-Grid Container für Mikrocontroller-Daten -->
             <div class="card">
-                <h2>Microcontroller Data</h2>
+                <h2>Microcontroller Daten</h2>
                 <div class="data-columns">
                     <div class="data-column">
-                        <h3>PV-Messwerte</h3>
-                        <p>PV Input Voltage: <span id="pvInV">NaN</span> V</p>
-                        <p>PV Input Current: <span id="pvInI">NaN</span> A</p>
+                        <h3>PV-Messwerte</h3>	<!-- 1. Datenspalte für PV-Messwerte -->
+                        <p>PV Spannung: <span id="pvInV">NaN</span>&nbsp;V</p>
+                        <p>PV Strom: <span id="pvInI">NaN</span>&nbsp;A</p>
                     </div>
-                    <div class="data-column">
+                    <div class="data-column">	<!-- 2. Datenspalte für Netz-Messwerte -->
                         <h3>Netz-Messwerte</h3>
-                        <p>LLC DC Link Output Voltage: <span id="llcDCLinkOutV">NaN</span> V</p>
-                        <p>Inverter Grid Output Voltage: <span id="inverterGridOutV">NaN</span> V</p>
-                        <p>Inverter Grid Output Current: <span id="inverterGridOutI">NaN</span> A</p>
-                        <p>Grid Cos(phi): <span id="inverterGridOutCosphi">NaN</span></p>
-                        <p>Grid Frequency: <span id="inverterGridOutF">NaN</span> Hz</p>
-                        <p>Fault Status: <span id="faultStatus">NaN</span></p>
-                        <p>Relay Status: <span id="relaisStatus">NaN</span></p>
+                        <p>DC-Link Spannung: <span id="llcDCLinkOutV">NaN</span>&nbsp;V</p>
+                        <p>Inverter Ausgangsspannung: <span id="inverterGridOutV">NaN</span>&nbsp;V</p>
+                        <p>Inverter Ausgangsstrom: <span id="inverterGridOutI">NaN</span>&nbsp;A</p>
+                        <p>Leistungsfaktor cos &#966;: <span id="inverterGridOutCosphi">NaN</span></p>
+                        <p>Netzfrequenz: <span id="inverterGridOutF">NaN</span>&nbsp;Hz</p>
+                        <p>Fehlerstatus: <span id="faultStatus">NaN</span></p>
+                        <p>Relaiszustand: <span id="relaisStatus">NaN</span></p>
                     </div>
                 </div>
-                <p class="gray-label">Last update: <span id="mcDataTimestamp"></span></p>
+                <p class="gray-label">Letztes Update: <span id="mcDataTimestamp"></span></p>	<!-- Zeitstempelanzeige für letzte Aktualisierung -->
             </div>
         </div>
 
     </div>
-    <div class="footer">
+    <div class="footer">	<!-- Leere Fusszeile -->
      </div>
 </body>
-<script>
-    // DOM Elements
+<script> 
+	// Script Block enthält
+    // DOM Elemente <=> JavaScript-Variablen werden deklariert, um Verweise auf verschiedene HTML-Elemente zu erhalten, die aktualisiert oder mit denen interagiert werden sollen (z. B. Schaltflächen, Statusanzeigen, Datenfelder).
     const connectButton = document.getElementById('connectBleButton');
     const disconnectButton = document.getElementById('disconnectBleButton');
     const bleStateContainer = document.getElementById('bleState');
 	var reconnectAttempts = 0; // NEW: Counter for auto-reconnect attempts
     const MAX_RECONNECT_ATTEMPTS = 5; // NEW: Max attempts for auto-reconnect
     const RECONNECT_DELAY_MS = 3000; // NEW: Delay between reconnect attempts
-
-    // NEW DOM Elements for microcontroller data
     const pvInVContainer = document.getElementById('pvInV');
     const pvInIContainer = document.getElementById('pvInI');
     const llcDCLinkOutVContainer = document.getElementById('llcDCLinkOutV');
@@ -185,7 +193,7 @@
         .catch(error => {
             console.log('Error during connection: ', error);
             bleStateContainer.innerHTML = "Connection failed!";
-            bleStateContainer.style.color = "#d13a30";
+            bleStateContainer.style.color = "#ff0000";
             // Ensure manualDisconnect is false on connection failure
             manualDisconnect = false; // Important: if connection fails, it's not a manual disconnect
             // Clean up global BLE objects on connection error
@@ -212,7 +220,7 @@
     function onDisconnected(event){
         console.log('Device Disconnected:', event.target.device.name);
         bleStateContainer.innerHTML = "Device disconnected";
-        bleStateContainer.style.color = "#d13a30";
+        bleStateContainer.style.color = "#ff0000";
 
         // Reset global BLE objects to ensure a clean state for the next connection attempt
         bleServer = null;
@@ -304,7 +312,7 @@
                     .then(() => {
                         console.log("Device Disconnected successfully.");
                         bleStateContainer.innerHTML = "Device Disconnected";
-                        bleStateContainer.style.color = "#d13a30";
+                        bleStateContainer.style.color = "#ff0000";
                         // Reset global BLE objects here for a clean state
                         bleServer = null;
                         bleServiceFound = null;
@@ -323,7 +331,7 @@
                 console.log("No characteristic found to stop notifications. Disconnecting server.");
                 bleServer.disconnect();
                 bleStateContainer.innerHTML = "Device Disconnected";
-                bleStateContainer.style.color = "#d13a30";
+                bleStateContainer.style.color = "#ff0000";
                 // Reset global BLE objects
                 bleServer = null;
                 bleServiceFound = null;
